@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Illit - Gerenciador de Backups de Saves de Jogos
 Um app simples para criar e enviar backups de saves de jogos ao Discord via webhook.
 

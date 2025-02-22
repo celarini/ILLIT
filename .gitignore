@@ -9,6 +9,7 @@ build/
 .pub-cache/
 .pub/
 coverage/
+.web
 lib/generated_plugin_registrant.dart
 
 # Configuração local (não ignorar config.json, pois é essencial)

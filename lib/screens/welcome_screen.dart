@@ -15,13 +15,13 @@
  * - flutter/material.dart: For UI components and animations
  * - screens/game_list_screen.dart: For navigation target
  * - screens/webhook_setup_screen.dart: For webhook setup
- * - services/api_service.dart: For webhook check
+ * - services/backup_service.dart: For webhook check
  */
 
 import 'package:flutter/material.dart';
 import 'game_list_screen.dart';
 import 'webhook_setup_screen.dart';
-import '../services/api_service.dart';
+import '../services/backup_service.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -33,7 +33,7 @@ class WelcomeScreen extends StatefulWidget {
 class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  final ApiService _apiService = ApiService();
+  final BackupService _backupService = BackupService();
 
   @override
   void initState() {
@@ -45,10 +45,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_controller);
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 5), () async {
+    Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         try {
-          final webhook = await _apiService.getWebhook();
+          final webhook = _backupService.getWebhook();
           if (webhook.isEmpty) {
             Navigator.pushReplacement(
               context,
@@ -97,7 +97,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> with SingleTickerProvider
               FadeTransition(
                 opacity: _fadeAnimation,
                 child: const Text(
-                  'ILLIT    아일릿',
+                  'Bem-vindo ao ILLIT',
                   style: TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 36,

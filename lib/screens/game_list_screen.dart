@@ -9,24 +9,20 @@
  * - Fetches and displays list of games with current SHA
  * - Adds/removes games with buttons
  * - Creates backups manually or automatically on SHA change
- * - Sends ZIPs to Discord webhook if configured, with size check
+ * - Sends ZIPs to Discord webhook if configured
  * - Monitors SHA changes efficiently
  * 
  * @dependencies
  * - flutter/material.dart: For UI components
- * - http/http.dart: For sending webhook notifications with file attachments
- * - dart:convert: For JSON/base64 encoding/decoding
  * - dart:async: For Timer and async operations
  * - settings_screen.dart: For navigation to SettingsScreen
- * - api_service.dart: For backend communication
+ * - backup_service.dart: For game and backup management
  */
 
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'dart:async';
 import 'settings_screen.dart';
-import '../services/api_service.dart';
+import '../services/backup_service.dart';
 
 class GameListScreen extends StatefulWidget {
   const GameListScreen({super.key});
@@ -40,11 +36,11 @@ class _GameListScreenState extends State<GameListScreen> {
   bool isMonitoring = false;
   String? webhookUrl;
   Timer? _monitoringTimer;
-  final ApiService _apiService = ApiService();
+  final BackupService _backupService = BackupService();
 
   Future<void> fetchGames() async {
     try {
-      final fetchedGames = await _apiService.fetchGames();
+      final fetchedGames = _backupService.fetchGames();
       setState(() {
         games = fetchedGames;
       });
@@ -57,9 +53,9 @@ class _GameListScreenState extends State<GameListScreen> {
 
   Future<void> createBackup(String gameName, {bool isManual = false}) async {
     try {
-      final (zipContent, sha) = await _apiService.createBackup(gameName);
+      final (zipContent, sha) = await _backupService.createBackup(gameName);
       if (webhookUrl != null && webhookUrl!.isNotEmpty) {
-        await _sendBackupToWebhook(webhookUrl!, zipContent, gameName, isManual);
+        await _backupService.sendToWebhook(webhookUrl!, zipContent, gameName, isManual);
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(isManual ? 'Backup manual criado!' : 'Backup automático criado!')),
@@ -72,48 +68,13 @@ class _GameListScreenState extends State<GameListScreen> {
     }
   }
 
-  Future<void> _sendBackupToWebhook(String url, String zipContent, String gameName, bool isManual) async {
-    try {
-      // Converter base64 para bytes e verificar tamanho
-      final zipBytes = base64Decode(zipContent);
-      const int discordMaxSize = 8 * 1024 * 1024; // 8 MB limite padrão do Discord
-      if (zipBytes.length > discordMaxSize) {
-        throw Exception('O arquivo ZIP (${zipBytes.length ~/ 1024} KB) excede o limite de 8 MB do Discord.');
-      }
-
-      var request = http.MultipartRequest('POST', Uri.parse(url));
-      request.files.add(http.MultipartFile.fromBytes(
-        'file',
-        zipBytes,
-        filename: 'backup_${gameName}_${DateTime.now().toIso8601String()}.zip',
-      ));
-      request.fields['content'] = isManual 
-          ? 'Backup manual de $gameName criado!'
-          : 'Backup automático de $gameName criado devido a mudança no save!';
-      
-      // Configurar timeout maior
-      final response = await request.send().timeout(const Duration(seconds: 30));
-      if (response.statusCode != 200 && response.statusCode != 204) {
-        throw Exception('Erro ao enviar backup ao webhook: HTTP ${response.statusCode}');
-      }
-      print('Backup enviado ao webhook com sucesso! Tamanho: ${zipBytes.length ~/ 1024} KB');
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao enviar backup ao webhook: $e')),
-      );
-      print('Erro ao enviar backup: $e');
-    }
-  }
-
   Future<void> addGame(String name, String saveDir, String executable) async {
     try {
-      final success = await _apiService.addGame(name, saveDir, executable);
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jogo adicionado com sucesso!')),
-        );
-        await fetchGames();
-      }
+      _backupService.addGame(name, saveDir, executable);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Jogo adicionado com sucesso!')),
+      );
+      await fetchGames();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao adicionar jogo: $e')),
@@ -123,13 +84,11 @@ class _GameListScreenState extends State<GameListScreen> {
 
   Future<void> removeGame(String gameName) async {
     try {
-      final success = await _apiService.removeGame(gameName);
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Jogo removido com sucesso!')),
-        );
-        await fetchGames();
-      }
+      _backupService.removeGame(gameName);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Jogo removido com sucesso!')),
+      );
+      await fetchGames();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao remover jogo: $e')),
@@ -159,7 +118,7 @@ class _GameListScreenState extends State<GameListScreen> {
 
   Future<void> _checkForChanges() async {
     try {
-      final updatedGames = await _apiService.fetchGames();
+      final updatedGames = _backupService.fetchGames();
       for (var newGame in updatedGames) {
         final gameName = newGame['key'];
         final currentSha = newGame['value']['current_sha'];
@@ -187,7 +146,7 @@ class _GameListScreenState extends State<GameListScreen> {
 
   Future<void> _loadWebhook() async {
     try {
-      final webhook = await _apiService.getWebhook();
+      final webhook = _backupService.getWebhook();
       setState(() {
         webhookUrl = webhook.isNotEmpty ? webhook : null;
       });
@@ -268,7 +227,7 @@ class _GameListScreenState extends State<GameListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🌬️아일릿', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF333333))),
+        title: const Text('ILLIT', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF333333))),
         backgroundColor: const Color(0xFFF8C1CC),
         actions: [
           IconButton(

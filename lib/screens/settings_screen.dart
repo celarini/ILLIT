@@ -3,24 +3,20 @@
  * @file Settings screen for the Illit app
  * @description
  * This file contains the SettingsScreen widget, which allows users to configure
- * a Discord webhook URL for receiving backup notifications, persisted via the backend.
+ * a Discord webhook URL for receiving backup notifications, persisted locally.
  *
  * Key features:
  * - Input field for webhook URL
  * - Save button with visual feedback
- * - Loads initial webhook from backend
+ * - Loads initial webhook from config.json
  *
  * @dependencies
  * - flutter/material.dart: For UI components
- * - api_service.dart: For saving/loading webhook
- *
- * @notes
- * - The webhook URL is saved to config.json via the backend
- * - Basic validation ensures non-empty URL
+ * - backup_service.dart: For saving/loading webhook
  */
 
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../services/backup_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -32,7 +28,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   late final TextEditingController _webhookController;
   bool _isSaved = false;
-  final ApiService _apiService = ApiService();
+  final BackupService _backupService = BackupService();
 
   @override
   void initState() {
@@ -43,7 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadWebhook() async {
     try {
-      final webhook = await _apiService.getWebhook();
+      final webhook = _backupService.getWebhook();
       setState(() {
         _webhookController.text = webhook;
       });
@@ -109,10 +105,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 16),
             Center(
               child: ElevatedButton(
-                onPressed: () async {
+                onPressed: () {
                   if (_webhookController.text.isNotEmpty) {
                     try {
-                      await _apiService.setWebhook(_webhookController.text);
+                      _backupService.setWebhook(_webhookController.text);
                       setState(() {
                         _isSaved = true;
                       });

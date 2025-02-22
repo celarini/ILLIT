@@ -7,17 +7,17 @@
  *
  * Key features:
  * - Displays a text field for webhook URL
- * - Saves the webhook via ApiService
+ * - Saves the webhook via BackupService
  * - Navigates to GameListScreen on success
  *
  * @dependencies
  * - flutter/material.dart: For UI components
- * - api_service.dart: For saving the webhook
+ * - backup_service.dart: For saving the webhook
  * - game_list_screen.dart: For navigation
  */
 
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../services/backup_service.dart';
 import 'game_list_screen.dart';
 
 class WebhookSetupScreen extends StatefulWidget {
@@ -29,7 +29,7 @@ class WebhookSetupScreen extends StatefulWidget {
 
 class _WebhookSetupScreenState extends State<WebhookSetupScreen> {
   final TextEditingController _webhookController = TextEditingController();
-  final ApiService _apiService = ApiService();
+  final BackupService _backupService = BackupService();
   bool _isSaving = false;
 
   Future<void> _saveWebhook() async {
@@ -45,7 +45,7 @@ class _WebhookSetupScreenState extends State<WebhookSetupScreen> {
     });
 
     try {
-      await _apiService.setWebhook(_webhookController.text);
+      _backupService.setWebhook(_webhookController.text);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const GameListScreen()),
@@ -81,7 +81,7 @@ class _WebhookSetupScreenState extends State<WebhookSetupScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Text(
-              'Bem-vindo ao ILLIT!\nConfigure seu Webhook do Discord para receber backups:',
+              'Bem-vindo ao Illit!\nConfigure seu Webhook do Discord para receber backups:',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontFamily: 'Poppins',

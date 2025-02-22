@@ -24,4 +24,4 @@ Um app simples para criar e enviar backups de saves de jogos ao Discord via webh
 =======
 # ILLIT
 Backup Save Games
->>>>>>> 776f43db37b874eb9bb8cc408d64319cb25cfdbe
+>>>>>>> SHURA
